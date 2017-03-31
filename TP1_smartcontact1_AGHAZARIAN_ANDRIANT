@@ -1,0 +1,104 @@
+pragma solidity ^0.4.8;
+contract SystemeDeVote {
+
+string resultatVote;
+string propositionVote;
+uint numBlockFin;
+
+// Structure de chacun des votants
+struct Votant{
+ string nom;
+ address clePublique;
+ uint choixVotant;
+ bool aVote;
+}
+
+// Tableau des votants
+Votant[] ListeVotants;
+
+// Organisateur du vote
+address Organisateur;
+
+// gestin des droits : seul l'orga peut appeler la fonction
+modifier isOrganisateur(){
+    if(msg.sender!=Organisateur) throw;
+    _;
+}
+ event notifyResult(address Organisateur, string resultatVote);
+
+
+// Constructeur du système de vote
+function SystemeDeVote(uint _numBlockFin, string _propositionVote){
+ Organisateur = msg.sender;
+ numBlockFin = _numBlockFin;
+ propositionVote = _propositionVote;
+}
+
+// focntion permettant d'ajouter un votant.
+function ajouterVotant(string _nom, address _clePublique) isOrganisateur(){
+    ListeVotants.push(Votant({
+        nom : _nom,
+        clePublique : _clePublique,
+        choixVotant :0 , aVote : false}));
+}
+
+// fonction vérifiant que le votant ne vote pas plus d'une fois.
+modifier verifierVotant(){
+    for (uint i=0; i<= ListeVotants.length; i++){
+        if (msg.sender == ListeVotants[i].clePublique && ListeVotants[i].aVote == true){
+        throw;
+        }
+        _;    
+        
+    }
+}
+
+//fonction permettant de faire voter le votant et de storer son vote dans le tableau.
+function voter(uint _choixVotant) verifierVotant(){
+    for (uint i=0; i<= ListeVotants.length; i++){
+        if (msg.sender == ListeVotants[i].clePublique){
+            ListeVotants[i].choixVotant = _choixVotant;
+        }
+    }
+}
+
+// fonction permettant de cloturer le vote et de donner le résultat du vote
+function getResultat() isOrganisateur(){
+    // initialistion des compteur d'incrémentation
+    uint totYes;
+    uint totNo;
+    // On parcour le tableau et on comptabilise les votes des votants ayant voter
+    for (uint i=0; i<= ListeVotants.length; i++){
+        if (ListeVotants[i].aVote == true){
+       
+            if (ListeVotants[i].choixVotant == 1){
+                totYes ++;
+            }
+        
+            else if (ListeVotants[i].choixVotant == 2){
+                totNo ++;
+            }
+             
+        }
+    }
+    // On détermine l'issue du vote
+    if (totYes > totNo){
+        resultatVote = 'Oui';
+    }
+    else {
+        resultatVote = 'Non';
+    }
+    notifyResult(Organisateur, resultatVote);
+}
+
+//on autorise l'accès à la proposition de vote
+function getPropositionVote() public constant returns(string) {
+    return propositionVote;
+}
+
+
+// fonction qui détruit le prgramme
+function kill() isOrganisateur() {
+     suicide(msg.sender);
+}
+}
